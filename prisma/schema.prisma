@@ -4,10 +4,109 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+model User {
+  userId     Int     @id @default(autoincrement())
+  name       String
+  email      String  @unique
+  password   String
+  role       Role    @default(USER)
+  isVerified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  verificationTokens VerificationToken[]
+  todos              Todo[]
+  workplans          Workplan[]
+}
+
+model VerificationToken {
+  tokenId   Int       @id @default(autoincrement())
+  userId    Int
+  token   String    @unique
+  type      TokenType
+  expiresAt DateTime
+  user      User      @relation(fields: [userId], references: [userId], onDelete: Cascade)
+
+  @@unique([userId, type])
+}
+
+model Todo {
+  todoId         Int         @id @default(autoincrement())
+  title          String
+  description    String?
+  categoryId     Int?
+  category       Category?   @relation(fields: [categoryId], references: [categoryId])
+  exprectedTime  ExpectedTime?
+  repeatUnit     RepeatUnit?
+  repeatInterval Int?
+  order          Int
+  userId         Int
+  workplanId     Int?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user            User             @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  workplan        Workplan?        @relation(fields: [workplanId], references: [workplanId])
+  taskcompletions Taskcompletion[]
+}
+
+model Category {
+  categoryId Int    @id @default(autoincrement())
+  name       String @unique
+  todos      Todo[]
+}
+
+model Workplan {
+  workplanId     Int         @id @default(autoincrement())
+  name           String
+  description    String?
+  repeatUnit     RepeatUnit? 
+  repeatInterval Int?
+  isActive       Boolean     @default(true)
+  userId         Int
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  todo Todo[]
+}
+
+model Taskcompletion {
+  completionId Int      @id @default(autoincrement())
+  todoId       Int
+  completedAt  DateTime @default(now())
+
+  todo Todo @relation(fields: [todoId], references: [todoId], onDelete: Cascade)
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum RepeatUnit {
+  DAILY // Repeat every day
+  WEEKLY // Repeat every week
+  MONTHLY // Repeat every month
+  YEARLY // Repeat every year
+}
+
+enum ExpectedTime {
+  MORNING // 5AM - 12PM
+  AFTERNOON // 12PM - 5PM
+  EVENING // 5PM - 9PM
+  NIGHT // 9PM - 5AM
 }

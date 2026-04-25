@@ -1,4 +1,7 @@
 {
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "name": "todo-project",
   "version": "0.0.1",
   "description": "",
