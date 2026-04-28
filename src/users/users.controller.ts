@@ -16,8 +16,19 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  async create(@Body() createUserDto: CreateUserDto) {
+    try {
+      await this.usersService.create(createUserDto);
+      return {
+        message: 'User created successfully',
+        statusCode: 201,
+      };
+    } catch (error) {
+      return {
+        message: error,
+        statusCode: 409,
+      };
+    }
   }
 
   @Get()
@@ -36,7 +47,18 @@ export class UsersController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  async remove(@Param('id') id: string) {
+    try {
+      await this.usersService.remove(+id);
+      return {
+        message: ' User deleted successfully',
+        statusCode: 200,
+      };
+    } catch (error) {
+      return {
+        message: 'User not found',
+        statusCode: 404,
+      };
+    }
   }
 }
