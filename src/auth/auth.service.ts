@@ -2,10 +2,12 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/service/prisma.service';
 import { UsersService } from '../users/users.service';
 import { JwtService } from '@nestjs/jwt';
-import { Role, User,TokenType } from '@prisma/client';
+import { Role, User, TokenType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { LoginDto } from './dto/login.dto';
-
+import { CreateUserDto } from '../users/dto/create-user.dto';
+import { RedisService } from '../redis/redis.service';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class AuthService {
@@ -13,10 +15,10 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly redisService: RedisService,
+    private readonly mailService: MailService,
   ) {}
-  async validateUser(
-   dto:LoginDto,
-  ): Promise<Omit<User, 'password'> | null> {
+  async validateUser(dto: LoginDto): Promise<Omit<User, 'password'> | null> {
     const user = await this.usersService.findByEmail(dto.email);
     //check if user exists
     if (!user) {
@@ -26,7 +28,7 @@ export class AuthService {
       const isMatch = await bcrypt.compare(dto.password, user.password);
 
       // if password is not match
-     if (!isMatch) {
+      if (!isMatch) {
         throw new UnauthorizedException('Invalid password');
       }
       const { password: _, ...result } = user;
@@ -40,18 +42,71 @@ export class AuthService {
       name: user.name,
       role: user.role,
     };
-    const access_token = this.jwtService.sign(payload)
+    const access_token = this.jwtService.sign(payload);
     await this.prisma.verificationToken.create({
-      data:{
+      data: {
         userId: user.userId,
         token: access_token,
         type: TokenType.EMAIL_VERIFICATION,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24) // 24 hours
-      }
-    })
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24), // 24 hours
+      },
+    });
     return {
       access_token,
-      user
+      user,
+    };
+  }
+  async signUp(signUpDto: CreateUserDto) {
+    const user = await this.usersService.findByEmail(signUpDto.email);
+    if (user) {
+      throw new UnauthorizedException(
+        'The user with this email already exists',
+      );
+    }
+    // generating 6 digits code for user verification
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // sending the code to user email
+    console.log('--- Start SignUp Process ---');
+    await this.mailService.sendOTP(signUpDto.email, otp);
+    console.log('Email sent, now storing in Redis...');
+    // storing the code in redis
+    try {
+      const res = await this.redisService.set(
+        `register:${signUpDto.email}`,
+        JSON.stringify({ ...signUpDto, otp }),
+        'EX',
+        60 * 5,
+      );
+      console.log('Redis Set Result:', res);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  async verifyOtp(email: string, otp: string) {
+    console.log('Searching for Email:', `register:${email}`)
+    const data = await this.redisService.get(`register:${email}`);
+    console.log('Redis Get Result:', data);
+    if (!data) {
+      throw new UnauthorizedException('Code is expired or invalid');
+    }
+    const userData = JSON.parse(data);
+
+    if (userData.otp !== otp) {
+      throw new UnauthorizedException('Invalid OTP');
+    }
+    const newUser = await this.usersService.create({
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      isVerified: true,
+      role: Role.USER,
+    });
+
+    await this.redisService.del(`register:${email}`);
+
+    return {
+      message: 'User created successfully',
+      data: newUser,
     };
   }
 }

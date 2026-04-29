@@ -12,7 +12,7 @@ export class RedisService extends Redis implements OnModuleInit, OnModuleDestroy
       port: Number(configService.get<number>('REDIS_PORT')),
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
-      lazyConnect: true,
+     lazyConnect: true,
     });
   }
   onModuleInit() {
