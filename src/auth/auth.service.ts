@@ -66,9 +66,9 @@ export class AuthService {
     // generating 6 digits code for user verification
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     // sending the code to user email
-    console.log('--- Start SignUp Process ---');
+
     await this.mailService.sendOTP(signUpDto.email, otp);
-    console.log('Email sent, now storing in Redis...');
+
     // storing the code in redis
     try {
       const res = await this.redisService.set(
@@ -77,15 +77,13 @@ export class AuthService {
         'EX',
         60 * 5,
       );
-      console.log('Redis Set Result:', res);
     } catch (error) {
       console.log(error);
     }
   }
   async verifyOtp(email: string, otp: string) {
-    console.log('Searching for Email:', `register:${email}`)
     const data = await this.redisService.get(`register:${email}`);
-    console.log('Redis Get Result:', data);
+
     if (!data) {
       throw new UnauthorizedException('Code is expired or invalid');
     }

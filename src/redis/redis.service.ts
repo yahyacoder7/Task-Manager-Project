@@ -11,17 +11,16 @@ export class RedisService extends Redis implements OnModuleInit, OnModuleDestroy
       host: configService.get<string>('REDIS_HOST'),
       port: Number(configService.get<number>('REDIS_PORT')),
       maxRetriesPerRequest: null,
-      enableReadyCheck: false,
-     lazyConnect: true,
+      enableReadyCheck: false
     });
   }
   onModuleInit() {
-    try {
-      this.connect();
+    this.on('connect', () => {
       this.logger.log('🟢 Redis connected 🟢');
-    } catch (error) {
+    });
+    this.on('error', (error) => {
       this.logger.error(error + '🔴 Redis not connected 🔴');
-    }
+    });
   }
   onModuleDestroy() {
     this.disconnect();
