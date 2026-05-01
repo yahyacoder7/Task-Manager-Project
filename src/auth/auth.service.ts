@@ -69,7 +69,7 @@ export class AuthService {
 
     await this.mailService.sendOTP(signUpDto.email, otp);
 
-    // storing the code in redis
+    // storing the code in redis and the otp is become in type of string
     try {
       const res = await this.redisService.set(
         `register:${signUpDto.email}`,
@@ -81,14 +81,18 @@ export class AuthService {
       console.log(error);
     }
   }
-  async verifyOtp(email: string, otp: string) {
+  async verifyOtp(email: string, otp: string|number) {
+    if(typeof otp === 'number'){
+      otp = otp.toString();
+    }
     const data = await this.redisService.get(`register:${email}`);
 
     if (!data) {
       throw new UnauthorizedException('Code is expired or invalid');
     }
+    // this line is to parse the data from redis to get user info 
     const userData = JSON.parse(data);
-
+//compare the code from user that is string with the code in redis that is string 
     if (userData.otp !== otp) {
       throw new UnauthorizedException('Invalid OTP');
     }

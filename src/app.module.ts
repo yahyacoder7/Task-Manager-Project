@@ -6,7 +6,6 @@ import { PrismaModule } from '../prisma/module/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import { TodoModule } from './todo/todo.module';
-import { CategortModule } from './categort/categort.module';
 import { CategoryModule } from './category/category.module';
 
 @Module({
@@ -18,7 +17,6 @@ import { CategoryModule } from './category/category.module';
       isGlobal: true,
     }),
     TodoModule,
-    CategortModule,
     CategoryModule,
   ],
   controllers: [AppController],
