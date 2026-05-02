@@ -48,7 +48,7 @@ model Todo {
   exprectedTime  ExpectedTime?
   repeatUnit     RepeatUnit?
   repeatInterval Int?
-  order          Int
+  order          Int? @default(0)
   userId         Int
   workplanId     Int?
   createdAt      DateTime    @default(now())
