@@ -19,32 +19,39 @@ import { AuthGuard } from '../auth/guards/auth.guard';
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
-  @Post()
+  @Post('add')
   create(@Body() createCategoryDto: CreateCategoryDto, @Req() req: any) {
     const userId = req.user.sub;
     return this.categoryService.create(+userId, createCategoryDto);
   }
 
-  @Get()
+  @Get('get-all-categories')
   findAll(@Req() req: any) {
     return this.categoryService.findAll(req.user.sub);
   }
 
-  @Get(':id')
+  @Get('get-one/:id')
   findOne(@Param('id') id: string) {
     return this.categoryService.findOne(+id);
   }
 
-  @Patch(':id')
+  @Patch('update/:id')
   update(
     @Param('id') id: string,
     @Body() updateCategoryDto: UpdateCategoryDto,
   ) {
-    return this.categoryService.update(+id, updateCategoryDto);
+    const category = this.categoryService.update(+id, updateCategoryDto);
+    return {
+      message: 'Category updated successfully',
+      category,
+    };
   }
 
-  @Delete(':id')
+  @Delete('delete/:id')
   remove(@Param('id') id: string) {
-    return this.categoryService.remove(+id);
+    this.categoryService.remove(+id);
+    return {
+      message: 'Category deleted successfully',
+    };
   }
 }

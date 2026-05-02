@@ -43,13 +43,23 @@ export class AuthService {
       role: user.role,
     };
     const access_token = this.jwtService.sign(payload);
-    await this.prisma.verificationToken.create({
-      data: {
+    await this.prisma.verificationToken.upsert({
+      where: {
+        userId_type:{
+          userId: user.userId,
+          type: TokenType.EMAIL_VERIFICATION,
+        }
+      },
+      update:{
+        token: access_token,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      },
+      create:{
         userId: user.userId,
         token: access_token,
         type: TokenType.EMAIL_VERIFICATION,
-        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24), // 24 hours
-      },
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      }
     });
     return {
       access_token,
