@@ -30,7 +30,7 @@ export class CreateTodoDto {
     workplanId?:number;
 
     @IsInt()
-    @IsNotEmpty()
-    order:number;
+    @IsOptional()
+    order?:number;
 
 }
