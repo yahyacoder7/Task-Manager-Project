@@ -7,10 +7,10 @@ import { BadRequestException } from '@nestjs/common';
 export class CategoryService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async create(createCategoryDto: CreateCategoryDto) {
+  async create(userId: number, createCategoryDto: CreateCategoryDto) {
     try {
       const category = await this.prismaService.category.create({
-        data: createCategoryDto,
+        data: { ...createCategoryDto, userId: userId },
       });
 
       return category;
@@ -43,7 +43,6 @@ export class CategoryService {
     return this.prismaService.category.update({
       where: {
         categoryId: id,
-        userId: updateCategoryDto.userId,
       },
       data: updateCategoryDto,
     });
