@@ -62,7 +62,10 @@ export class TodoService {
       }
       const updatedTodo = await this.prisma.todo.update({
         where: { todoId: todoId },
-        data: updateTodoDto,
+        data: {
+          ...updateTodoDto,
+          notified: false,
+        },
       });
       return updatedTodo;
     } catch (error) {
@@ -87,35 +90,79 @@ export class TodoService {
     }
   }
 
-
-  async complete(todoId: number) {
+  async completeTodo(todoId: number) {
     try {
+      let nextDate: Date | null = null;
+
       const todo = await this.prisma.todo.findUnique({
         where: { todoId: todoId },
       });
+
       if (!todo) {
         throw new BadRequestException('Todo not found');
       }
-      const repeatUitToDays = {
-        DAILY: 1,
-        WEEKLY: 7,
-        MONTHLY: 30,
-        YEARLY: 365,
-      }
-      const repeatInterval = repeatUitToDays[todo.repeatUnit] * todo.repeatInterval;
-      await this.prisma.todo.create({
-        where:{
-          todoId: todo.todoId
-        },
-        data:{
-          taskcompletions:{
-            create:{
-              completedAt: new Date(),
-              todoId: todo.todoId,   
-            }
+
+      // this condition handle the case where the todo is repeated and has a start date or expected time
+      if (
+        todo.repeatUnit &&
+        todo.repeatInterval && 
+        todo.repeatInterval > 0
+      ) {
+        // calculate the next repeat date to adding it to the old start date
+        if(todo.startDate){
+        nextDate = todo.startDate;
+        while (nextDate <= new Date()) {
+          switch (todo.repeatUnit) {
+            case 'DAILY':
+              nextDate.setDate(nextDate.getDate() + todo.repeatInterval);
+              break;
+            case 'WEEKLY':
+              nextDate.setDate(nextDate.getDate() + todo.repeatInterval * 7);
+              break;
+            case 'MONTHLY':
+              nextDate.setMonth(nextDate.getMonth() + todo.repeatInterval);
+              break;
+            case 'YEARLY':
+              nextDate.setFullYear(
+                nextDate.getFullYear() + todo.repeatInterval,
+              );
+              break;
           }
         }
-      })
+      }
+
+        await this.prisma.todo.update({
+          where: {
+            todoId: todoId,
+          },
+          data: {
+            startDate: todo.startDate ? nextDate : null,
+            notified: false,
+
+            taskcompletions: {
+              create: {
+                completedAt: new Date(),
+              },
+            },
+          },
+        });
+
+        // this condition handle the case where the todo is not repeated
+      } else {
+        await this.prisma.todo.update({
+          where: {
+            todoId: todoId,
+          },
+          data: {
+            isCompleted: true,
+            taskcompletions: {
+              create: {
+                completedAt: new Date(),
+              },
+            },
+          },
+        });
+      }
     } catch (error) {
       throw new BadRequestException(error.message);
     }

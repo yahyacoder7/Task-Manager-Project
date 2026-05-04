@@ -24,28 +24,31 @@ export class TodoSchedule {
     const dueTodos = await this.prisma.todo.findMany({
       where: {
         startDate: {
-          gte: now,
           lte: new Date(now.getTime() + 1 * 60 * 1000),
         },
-        taskcompletions: {
-          none: {
-            completedAt: {
-                gte: now
-            },
-          },
-        },
+        isCompleted: false,
+        notified: false,
       },
     });
 
     if (dueTodos.length > 0) {
+      const todoIds = dueTodos.map((todo) => todo.todoId);
       dueTodos.forEach((todo) => {
         this.logger.log(
           `Sending reminder for todo: ${todo.title} to user ${todo.userId}`,
         );
       });
+
+      await this.prisma.todo.updateMany({
+        where: { todoId: { in: todoIds } },
+        data: {
+          notified: true,
+        },
+      });
     }
   }
   private async handleByExpectedTime(currentHour: number) {
+    const now = new Date();
     const periodToHour = {
       MORNING: 5,
       AFTERNOON: 12,
@@ -62,21 +65,44 @@ export class TodoSchedule {
     if (!currentPeriod) return;
 
     // find all todos that are due in the current period
-    const dueTodosByExpectedTime = await this.prisma.todo.findMany({
+    const dueTodos = await this.prisma.todo.findMany({
       where: {
-        exprectedTime: currentPeriod,
-        taskcompletions: {
-          none: {},
-        },
+        expectedTime: currentPeriod,
+        isCompleted: false,
+        notified: false,
       },
     });
 
-    if (dueTodosByExpectedTime.length > 0) {
-      dueTodosByExpectedTime.forEach((todo) => {
+    if (dueTodos.length > 0) {
+      const todoIds = dueTodos.map((todo) => todo.todoId);
+
+      dueTodos.forEach((todo) => {
         this.logger.log(
           `Sending reminder for todo: ${todo.title} to user ${todo.userId}`,
         );
       });
+      await this.prisma.todo.updateMany({
+        where: { todoId: { in: todoIds } },
+        data: {
+          notified: true,
+        },
+      });
     }
   }
-}
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async resetNotidied(){
+    
+    this.logger.log("Resetting notified status for all todos")
+    // this operation update the notified status to false for all repeated todos 
+     await this.prisma.todo.updateMany({
+       where : {
+        repeatUnit: {not:null},
+        notified : true
+      },
+       data : {
+        notified : false
+      }
+     })
+    }
+  }

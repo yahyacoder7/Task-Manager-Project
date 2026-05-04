@@ -1,5 +1,6 @@
-import { IsDateString, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsInt } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsInt, ValidateIf, IsEmpty, IsPositive , IsDefined, IsDate} from 'class-validator';
 import { ExpectedTime, RepeatUnit } from '@prisma/client';
+import { Type } from 'class-transformer';
 export class CreateTodoDto {
     @IsString()
     @IsNotEmpty()
@@ -11,14 +12,28 @@ export class CreateTodoDto {
 
     @IsEnum(ExpectedTime)
     @IsOptional()
+    @ValidateIf(o=> o.startDate)
+    @IsEmpty()
     expectedTime?:ExpectedTime
+
+    @IsDate()
+    @IsOptional()
+    @Type(() => Date)
+    @ValidateIf(o=> o.expectedTime)
+    @IsEmpty()
+    startDate?:Date
 
     @IsEnum(RepeatUnit)
     @IsOptional()
+    @ValidateIf(o => !o.startDate && !o.expectedTime)
+     @IsEmpty({message:"startDate or expectedTime must be provided"})
     repeatUnit?:RepeatUnit
 
     @IsNumber()
     @IsOptional()
+    @ValidateIf(o => o.repeatUnit)
+    @IsDefined({message:"repeatInterval must be provided"})
+    @IsPositive()
     repeatInterval?:number
 
     @IsNumber()
