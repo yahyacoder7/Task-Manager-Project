@@ -91,18 +91,17 @@ export class TodoSchedule {
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
-  async resetNotidied(){
-    
-    this.logger.log("Resetting notified status for all todos")
-    // this operation update the notified status to false for all repeated todos 
-     await this.prisma.todo.updateMany({
-       where : {
-        repeatUnit: {not:null},
-        notified : true
+  async resetNotidied() {
+    this.logger.log('Resetting notified status for all todos');
+    // this operation update the notified status to false for all repeated todos
+    await this.prisma.todo.updateMany({
+      where: {
+        repeatUnit: { not: null },
+        notified: true,
       },
-       data : {
-        notified : false
-      }
-     })
-    }
+      data: {
+        notified: false,
+      },
+    });
   }
+}

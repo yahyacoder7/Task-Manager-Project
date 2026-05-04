@@ -3,11 +3,12 @@ import { TodoService } from './todo.service';
 import { TodoController } from './todo.controller';
 import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../../prisma/module/prisma.module';
+import { TodoSchedule } from './todo.schedule';
 
 @Module({
   imports: [AuthModule, PrismaModule],
   controllers: [TodoController],
-  providers: [TodoService],
+  providers: [TodoService, TodoSchedule],
   exports: [TodoService],
 })
 export class TodoModule {}

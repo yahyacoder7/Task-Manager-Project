@@ -52,16 +52,16 @@ export class TodoService {
     }
   }
 
-  async update(todoId: number, updateTodoDto: UpdateTodoDto) {
+  async update(todoId: number, updateTodoDto: UpdateTodoDto, userId: number) {
     try {
       const todo = await this.prisma.todo.findUnique({
-        where: { todoId: todoId },
+        where: { todoId: todoId, userId: userId },
       });
       if (!todo) {
         throw new BadRequestException('Todo not found');
       }
       const updatedTodo = await this.prisma.todo.update({
-        where: { todoId: todoId },
+        where: { todoId: todoId, userId: userId },
         data: {
           ...updateTodoDto,
           notified: false,
@@ -73,16 +73,16 @@ export class TodoService {
     }
   }
 
-  async remove(todoId: number) {
+  async remove(todoId: number, userId: number) {
     try {
       const todo = await this.prisma.todo.findUnique({
-        where: { todoId: todoId },
+        where: { todoId: todoId, userId: userId },
       });
       if (!todo) {
         throw new BadRequestException('Todo not found');
       }
       const deletedTodo = await this.prisma.todo.delete({
-        where: { todoId: todoId },
+        where: { todoId: todoId, userId: userId },
       });
       return deletedTodo;
     } catch (error) {
@@ -90,12 +90,12 @@ export class TodoService {
     }
   }
 
-  async completeTodo(todoId: number) {
+  async completeTodo(todoId: number, userId:number) {
     try {
       let nextDate: Date | null = null;
 
       const todo = await this.prisma.todo.findUnique({
-        where: { todoId: todoId },
+        where: { todoId: todoId, userId: userId },
       });
 
       if (!todo) {
@@ -134,6 +134,7 @@ export class TodoService {
         await this.prisma.todo.update({
           where: {
             todoId: todoId,
+            userId: userId
           },
           data: {
             startDate: todo.startDate ? nextDate : null,
@@ -152,6 +153,7 @@ export class TodoService {
         await this.prisma.todo.update({
           where: {
             todoId: todoId,
+            userId: userId
           },
           data: {
             isCompleted: true,
