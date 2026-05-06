@@ -76,8 +76,6 @@ model Workplan {
   workplanId     Int         @id @default(autoincrement())
   name           String
   description    String?
-  repeatUnit     RepeatUnit? 
-  repeatInterval Int?
   isActive       Boolean     @default(true)
   userId         Int
   createdAt      DateTime    @default(now())
