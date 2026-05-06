@@ -48,8 +48,13 @@ export class TodoController {
     return this.todoService.remove(+todoId, +req.user.sub);
   }
 
-  @Patch(':id/complete')
+  @Patch('complete/:id')
   completeTodo(@Param('id') todoId: string, @Req() req:any) {
     return this.todoService.completeTodo(+todoId, +req.user.sub);
+  }
+
+  @Get('get-all-completed-todos/:period')
+  getAllCompeletedTodos(@Param('period') period: string, @Req() req:any) {
+    return this.todoService.getAllCompeletedTodos(+req.user.sub, period);
   }
 }

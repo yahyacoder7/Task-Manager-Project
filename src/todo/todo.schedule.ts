@@ -15,6 +15,19 @@ export class TodoSchedule {
     now.setSeconds(0, 0);
     const currentHour = now.getHours();
 
+    // Reset isCompleted for repeated tasks whose next occurrence has arrived
+    await this.prisma.todo.updateMany({
+      where: {
+        repeatUnit: { not: null },
+        isCompleted: true,
+        startDate: { lte: now },
+      },
+      data: {
+        isCompleted: false,
+        notified: false,
+      },
+    });
+
     await this.handleByStartDate(now);
     await this.handleByExpectedTime(currentHour);
 
@@ -49,17 +62,12 @@ export class TodoSchedule {
   }
   private async handleByExpectedTime(currentHour: number) {
     const now = new Date();
-    const periodToHour = {
-      MORNING: 5,
-      AFTERNOON: 12,
-      EVENING: 17,
-      NIGHT: 22,
-    };
-
-    //this give us the current period based on the current hour
-    const currentPeriod = Object.entries(periodToHour).find(
-      ([period, hour]) => hour == currentHour,
-    )?.[0] as ExpectedTime | undefined;
+    // Determine the current period based on the hour range
+    let currentPeriod: ExpectedTime | undefined;
+    if (currentHour >= 5 && currentHour < 12) currentPeriod = 'MORNING';
+    else if (currentHour >= 12 && currentHour < 17) currentPeriod = 'AFTERNOON';
+    else if (currentHour >= 17 && currentHour < 22) currentPeriod = 'EVENING';
+    else if (currentHour >= 22 || currentHour < 5) currentPeriod = 'NIGHT';
 
     // return if the current period is not found
     if (!currentPeriod) return;
@@ -97,10 +105,11 @@ export class TodoSchedule {
     await this.prisma.todo.updateMany({
       where: {
         repeatUnit: { not: null },
-        notified: true,
+        OR: [{ notified: true }, { isCompleted: true }],
       },
       data: {
         notified: false,
+        isCompleted: false,
       },
     });
   }

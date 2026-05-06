@@ -29,10 +29,10 @@ export class CreateTodoDto {
     repeatUnit?:RepeatUnit
 
     @IsNumber()
+    @IsPositive()
     @IsOptional()
     @ValidateIf(o => o.repeatUnit)
     @IsDefined({message:"repeatInterval must be provided"})
-    @IsPositive()
     repeatInterval?:number
 
     @IsNumber()
