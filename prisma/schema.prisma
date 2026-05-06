@@ -45,10 +45,13 @@ model Todo {
   description    String?
   categoryId     Int?
   category       Category?   @relation(fields: [categoryId], references: [categoryId])
-  exprectedTime  ExpectedTime?
+  expectedTime  ExpectedTime? 
+  notified       Boolean     @default(false)
+  startDate      DateTime?
   repeatUnit     RepeatUnit?
   repeatInterval Int?
-  order          Int
+  isCompleted    Boolean     @default(false)
+  order          Int? @default(0)
   userId         Int
   workplanId     Int?
   createdAt      DateTime    @default(now())

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Todo" ALTER COLUMN "order" DROP NOT NULL,
+ALTER COLUMN "order" SET DEFAULT 0;
