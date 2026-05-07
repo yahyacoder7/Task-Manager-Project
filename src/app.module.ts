@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TodoModule } from './todo/todo.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CategoryModule } from './category/category.module';
+import { WorkPlanModule } from './work-plan/work-plan.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CategoryModule } from './category/category.module';
     }),
     TodoModule,
     CategoryModule,
+    WorkPlanModule,
   ],
   controllers: [AppController],
   providers: [AppService],
