@@ -1,20 +1,37 @@
-import { Injectable, NotFoundException , BadRequestException} from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateTodoDto } from './dto/create-todo.dto';
 import { UpdateTodoDto } from './dto/update-todo.dto';
 import { PrismaService } from '../../prisma/service/prisma.service';
-
+import { AiService } from '../ai/ai.service';
 
 @Injectable()
 export class TodoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly aiService: AiService,
+  ) {}
+
   async create(createTodoDto: CreateTodoDto, userId: number) {
-    return await this.prisma.todo
+    const todo = await this.prisma.todo
       .create({
         data: { ...createTodoDto, userId },
       })
       .catch((err) => {
-        throw new BadRequestException('Failed to create task. Please check your data.');
+        throw new BadRequestException(
+          'Failed to create task. Please check your data.',
+        );
       });
+    const aiAdvice = await this.aiService
+      .getTaskAdvice(+todo.todoId, userId)
+      .catch((err) => {
+       console.error("Error getting AI advice", err);
+      });
+
+    return todo;
   }
 
   async findAll(userId: number) {
