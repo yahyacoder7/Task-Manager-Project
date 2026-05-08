@@ -1,22 +1,19 @@
-import { Injectable } from '@nestjs/common';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RedisService } from '../redis/redis.service';
 import { PrismaService } from '../../prisma/service/prisma.service';
+import { Groq } from 'groq-sdk';
+
 @Injectable()
 export class AiService {
-  private genAI: GoogleGenerativeAI;
-  private model: any;
+  private groq: Groq;
   constructor(
     private config: ConfigService,
     private redis: RedisService,
     private prisma: PrismaService,
   ) {
-    this.genAI = new GoogleGenerativeAI(
-      this.config.get<string>('GOOGLE_API_KEY')!,
-    );
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-  }
+   this.groq = new Groq({ apiKey: this.config.get<string>('GROQ_API_KEY') });
+     }
 
   async getTaskAdvice(
     todoId: number,
@@ -35,7 +32,7 @@ export class AiService {
     const title = taskOwnership.title;
     const description = taskOwnership.description;
 
-    const cacheKey = `task-advice:${todoId}`;
+    const cacheKey = `user:${userId}:task:${todoId}:advice`;
     const cachedAdvice = await this.redis.get(cacheKey);
     if (cachedAdvice) {
       return {
@@ -44,25 +41,30 @@ export class AiService {
       };
     }
 
-    const prompt = `أنت مساعد لإدارة المهام. أعطِ نصيحة عملية لإنجاز هذه المهمة في جملة واحدة لا تتجاوز 30 كلمة بدون مقدمات:
-عنوان المهمة: "${title}"
-وصف المهمة: "${description || 'لا يوجد وصف'}"`;
-
     try {
-      const result = await this.model.generateContent(prompt);
-      const advice = result.response.text();
+  // 2. طلب النصيحة من Groq
+      const chatCompletion = await this.groq.chat.completions.create({
+        messages: [
+          {
+            role: 'user',
+         content: `أعطني نصيحة عملية بحدود 30 كلمة لهذه المهمة: ${taskOwnership.title} وصفها: ${taskOwnership.description || 'لاوصف'}`
+          },
+        ],
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 80,
+      });
 
+      const advice = chatCompletion.choices[0]?.message?.content || "بالتوفيق في مهمتك!";
+
+      // 3. تصحيح: حفظ النصيحة في Redis لمدة 24 ساعة
       await this.redis.set(cacheKey, advice, 'EX', 86400);
-      return {
-        advice,
-        source: 'api',
-      };
+
+      return { advice, source: 'ai' };
     } catch (error) {
       console.error('Error generating AI advice:', error);
-      return {
-        advice: 'لا يوجد نصيحة حاليا',
-        source: 'error',
-      };
+      throw new InternalServerErrorException(
+        'فشل إنشاء النصيحة من الذكاء الاصطناعي: ' + error.message,
+      );
     }
   }
 }
