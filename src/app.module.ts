@@ -9,6 +9,7 @@ import { TodoModule } from './todo/todo.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CategoryModule } from './category/category.module';
 import { WorkPlanModule } from './work-plan/work-plan.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { WorkPlanModule } from './work-plan/work-plan.module';
     TodoModule,
     CategoryModule,
     WorkPlanModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
