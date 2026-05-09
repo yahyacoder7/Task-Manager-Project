@@ -14,6 +14,13 @@ async function bootstrap() {
     }),
   );
   app.enableShutdownHooks();
+  // Allow CORS for Expo Web and other local dev origins
+  app.enableCors({
+    origin: true,        // allow all origins in development
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
   // here we define the config of swagger
   const config = new DocumentBuilder()
     .setTitle('To-Do Manager API') // اسم المشروع
