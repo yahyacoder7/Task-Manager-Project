@@ -16,6 +16,18 @@ export class TodoService {
   ) {}
 
   async create(createTodoDto: CreateTodoDto, userId: number) {
+    // حماية: منع إنشاء مهمة في الماضي
+    if (createTodoDto.startDate) {
+      const newStartDate = new Date(createTodoDto.startDate);
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startDay = new Date(newStartDate.getFullYear(), newStartDate.getMonth(), newStartDate.getDate());
+      
+      if (startDay < today) {
+        throw new BadRequestException('Cannot schedule a task in the past');
+      }
+    }
+
     const todo = await this.prisma.todo
       .create({
         data: { ...createTodoDto, userId },
@@ -37,7 +49,10 @@ export class TodoService {
   async findAll(userId: number) {
     return await this.prisma.todo.findMany({
       where: { userId },
-      include: { category: true },
+      include: { 
+        category: true,
+        taskcompletions: { orderBy: { completedAt: 'desc' }, take: 1 }
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -45,7 +60,11 @@ export class TodoService {
   async findOne(todoId: number, userId: number) {
     const todo = await this.prisma.todo.findUnique({
       where: { todoId: todoId, userId: userId },
-      include: { category: true },
+      include: { 
+        category: true, 
+        taskcompletions: true,
+        workplan: true,
+       },
     });
     if (!todo) {
       throw new NotFoundException('Task not found');
@@ -55,6 +74,20 @@ export class TodoService {
 
   async update(todoId: number, updateTodoDto: UpdateTodoDto, userId: number) {
     const todo = await this.findOne(todoId, userId);
+
+    // حماية: منع إدخال تاريخ في الماضي
+    if (updateTodoDto.startDate) {
+      const newStartDate = new Date(updateTodoDto.startDate);
+      const now = new Date();
+      
+      // نتحقق من اليوم (بدون الدقائق والثواني لكي نسمح بمهام اليوم الحالي)
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startDay = new Date(newStartDate.getFullYear(), newStartDate.getMonth(), newStartDate.getDate());
+      
+      if (startDay < today) {
+        throw new BadRequestException('Cannot schedule a task in the past');
+      }
+    }
 
     const isTimeChanged =
       (updateTodoDto.startDate !== undefined &&
@@ -69,6 +102,7 @@ export class TodoService {
         data: {
           ...updateTodoDto,
           notified: isTimeChanged ? false : todo.notified,
+          // إذا قام بتغيير الوقت (تأجيل)، نفتح المهمة من جديد. غير ذلك، نتركها كما هي.
           isCompleted: isTimeChanged ? false : todo.isCompleted,
         },
       })
@@ -85,15 +119,36 @@ export class TodoService {
   }
 
   async completeTodo(todoId: number, userId: number) {
-    const todo = await this.findOne(todoId, userId);
+    const todo = await this.prisma.todo.findUnique({
+      where: { todoId: todoId, userId: userId },
+      include: { taskcompletions: { orderBy: { completedAt: 'desc' } } },
+    });
+
+    if (!todo) {
+      throw new NotFoundException('Task not found');
+    }
 
     if (todo.isCompleted) {
       throw new BadRequestException('Task is already completed');
     }
 
-    let nextDate: Date | null = null;
-
+    // للمهام المتكررة
     if (todo.repeatUnit && todo.repeatInterval && todo.repeatInterval > 0) {
+      // التحقق مما إذا كانت المهمة قد اكتملت بالفعل اليوم
+      const lastCompletion = todo.taskcompletions[0];
+      if (lastCompletion) {
+        const today = new Date();
+        const lastCompletedAt = new Date(lastCompletion.completedAt);
+        if (
+          lastCompletedAt.getDate() === today.getDate() &&
+          lastCompletedAt.getMonth() === today.getMonth() &&
+          lastCompletedAt.getFullYear() === today.getFullYear()
+        ) {
+          throw new BadRequestException('Repeating task is already completed for today');
+        }
+      }
+
+      let nextDate: Date | null = null;
       if (todo.startDate) {
         nextDate = new Date(todo.startDate);
         while (nextDate <= new Date()) {
@@ -108,9 +163,7 @@ export class TodoService {
               nextDate.setMonth(nextDate.getMonth() + todo.repeatInterval);
               break;
             case 'YEARLY':
-              nextDate.setFullYear(
-                nextDate.getFullYear() + todo.repeatInterval,
-              );
+              nextDate.setFullYear(nextDate.getFullYear() + todo.repeatInterval);
               break;
           }
         }
@@ -120,7 +173,7 @@ export class TodoService {
         where: { todoId: todoId, userId: userId },
         data: {
           startDate: todo.startDate ? nextDate : null,
-          isCompleted: true,
+          isCompleted: false, // تبقى غير مكتملة لأنها متكررة
           notified: todo.expectedTime ? true : false,
           taskcompletions: {
             create: { completedAt: new Date() },
@@ -128,10 +181,11 @@ export class TodoService {
         },
       });
     } else {
+      // المهام العادية (التي لا تتكرر)
       return await this.prisma.todo.update({
         where: { todoId: todoId, userId: userId },
         data: {
-          isCompleted: true,
+          isCompleted: true, // تكتمل نهائياً
           taskcompletions: {
             create: { completedAt: new Date() },
           },
@@ -199,7 +253,10 @@ export class TodoService {
   async findByCategory(categoryId: number, userId: number) {
     return await this.prisma.todo.findMany({
       where: { categoryId, userId },
-      include: { category: true },
+      include: { 
+        category: true,
+        taskcompletions: { orderBy: { completedAt: 'desc' }, take: 1 }
+      },
       orderBy: { createdAt: 'desc' },
     });
   }
