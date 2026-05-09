@@ -121,4 +121,29 @@ export class AuthService {
       data: newUser,
     };
   }
+
+  async resendOtp(email: string) {
+    const data = await this.redisService.get(`register:${email}`);
+    if (!data) {
+      throw new BadRequestException('Registration data expired. Please register again.');
+    }
+
+    const userData = JSON.parse(data);
+    const newOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    try {
+      await this.mailService.sendOTP(email, newOtp);
+      // تحديث البيانات في Redis مع الكود الجديد
+      await this.redisService.set(
+        `register:${email}`,
+        JSON.stringify({ ...userData, otp: newOtp }),
+        'EX',
+        60 * 5, // تمديد الوقت لـ 5 دقائق أخرى
+      );
+
+      return { message: 'A new OTP has been sent to your email' };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to resend verification code');
+    }
+  }
 }

@@ -57,4 +57,17 @@ export class TodoController {
   getAllCompeletedTodos(@Param('period') period: string, @Req() req:any) {
     return this.todoService.getAllCompeletedTodos(+req.user.sub, period);
   }
+
+  @Get('status/summary')
+  @ApiOperation({ summary: 'Get total count of completed and incomplete tasks' })
+  getTodoStats(@Req() req: any) {
+    return this.todoService.getTodoStats(+req.user.sub);
+  }
+
+  @Get('category/:categoryId')
+  @ApiOperation({ summary: 'Get tasks by category ID' })
+  @ApiParam({ name: 'categoryId', description: 'The ID of the category' })
+  findByCategory(@Param('categoryId') categoryId: string, @Req() req: any) {
+    return this.todoService.findByCategory(+categoryId, +req.user.sub);
+  }
 }

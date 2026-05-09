@@ -225,4 +225,21 @@ export class TodoService {
       throw new BadRequestException(error.message);
     }
   }
+
+  async getTodoStats(userId: number) {
+    const [completed, incomplete] = await Promise.all([
+      this.prisma.todo.count({ where: { userId, isCompleted: true } }),
+      this.prisma.todo.count({ where: { userId, isCompleted: false } }),
+    ]);
+
+    return { completed, incomplete };
+  }
+
+  async findByCategory(categoryId: number, userId: number) {
+    return await this.prisma.todo.findMany({
+      where: { categoryId, userId },
+      include: { category: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

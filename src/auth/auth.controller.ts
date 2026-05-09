@@ -27,4 +27,13 @@ export class AuthController {
     const user = await this.authService.validateUser(loginDto);
     return await this.authService.login(user!);
   }
+
+  @Post('resend-otp')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Resend OTP code to user email' })
+  @ApiResponse({ status: 200, description: 'New OTP sent successfully.' })
+  @ApiResponse({ status: 400, description: 'Registration data not found or expired.' })
+  async resendOtp(@Body('email') email: string) {
+    return await this.authService.resendOtp(email);
+  }
 }
