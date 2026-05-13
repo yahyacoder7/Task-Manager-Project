@@ -13,24 +13,37 @@ type workplanType = Prisma.WorkplanGetPayload<{
   select: typeof workplanSelect;
 }>;
 
+const todayStart = () => {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+};
+const todayEnd = () => {
+  const d = new Date();
+  d.setUTCHours(23, 59, 59, 999);
+  return d;
+};
+
 const workplanSelect = {
-  //work plan data
   workplanId: true,
   name: true,
   description: true,
   createdAt: true,
   updatedAt: true,
-  //work plan's todos state data
   _count: { select: { todo: true } },
 } satisfies Prisma.WorkplanSelect;
+
+const isTodoCompleted = (t: any) => {
+  if (t.isCompleted) return true;
+  if (t.repeatUnit && t.taskcompletions && t.taskcompletions.length > 0) return true;
+  return false;
+};
+
 const calculateProgress = (workplan: any) => {
   const totalTodos = workplan._count?.todo || 0;
 
-  // This filter works for both cases:
-  // 1. If DB already filtered (isCompleted: true), the JS filter won't change anything.
-  // 2. If DB sent everything, the JS filter will correctly count only completed ones.
   const completedTodos = workplan.todo
-    ? workplan.todo.filter((t: any) => t.isCompleted === true).length
+    ? workplan.todo.filter((t: any) => isTodoCompleted(t)).length
     : 0;
 
   const percOfCompletedTodos =
@@ -220,7 +233,6 @@ export class WorkPlanService {
       where: { userId: userId, workplanId: workplanId },
       select: {
         ...workplanSelect,
-        // Fetch all todos with full details for the single view
         todo: {
           orderBy: { order: 'asc' },
           select: {
@@ -229,7 +241,13 @@ export class WorkPlanService {
             description: true,
             startDate: true,
             isCompleted: true,
+            repeatUnit: true,
             category: true,
+            taskcompletions: {
+              where: { completedAt: { gte: todayStart(), lte: todayEnd() } },
+              select: { completionId: true },
+              take: 1,
+            },
           },
         },
       },
@@ -239,7 +257,6 @@ export class WorkPlanService {
       throw new NotFoundException(`Work plan with ID ${workplanId} not found`);
     }
 
-    // Process workplan to add progress state and return
     return calculateProgress(workplan);
   }
 
@@ -252,15 +269,21 @@ export class WorkPlanService {
       where: { userId: userId },
       select: {
         ...workplanSelect,
-        // Only fetch minimal todo data (completed only) to save performance in list view
         todo: {
-          where: { isCompleted: true },
-          select: { isCompleted: true },
+          orderBy: { order: 'asc' },
+          select: {
+            isCompleted: true,
+            repeatUnit: true,
+            taskcompletions: {
+              where: { completedAt: { gte: todayStart(), lte: todayEnd() } },
+              select: { completionId: true },
+              take: 1,
+            },
+          },
         },
       },
     });
 
-    // Map through each workplan and calculate its progress state
     return workplans.map((workplan) => calculateProgress(workplan));
   }
 }

@@ -76,6 +76,8 @@ export class TodoController {
     return this.todoService.completeTodo(+todoId, +req.user.sub);
   }
 
+
+
   @Get('get-all-completed-todos/:period')
   @ApiOperation({ summary: 'Get completed tasks filtered by period' })
   @ApiParam({ name: 'period', enum: ['ALL', 'DAILY', 'WEEKLY', 'MONTHLY'], description: 'Time filter' })

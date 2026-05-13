@@ -8,10 +8,6 @@ import { UpdateTodoDto } from './dto/update-todo.dto';
 import { PrismaService } from '../../prisma/service/prisma.service';
 import { AiService } from '../ai/ai.service';
 
-function normalizeDate(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
-}
-
 @Injectable()
 export class TodoService {
   constructor(
@@ -141,12 +137,12 @@ export class TodoService {
       // التحقق مما إذا كانت المهمة قد اكتملت بالفعل اليوم
       const lastCompletion = todo.taskcompletions[0];
       if (lastCompletion) {
-        const today = normalizeDate(new Date());
-        const lastCompletedAt = normalizeDate(new Date(lastCompletion.completedAt));
+        const now = new Date();
+        const lastCompletedAt = new Date(lastCompletion.completedAt);
         if (
-          lastCompletedAt.getDate() === today.getDate() &&
-          lastCompletedAt.getMonth() === today.getMonth() &&
-          lastCompletedAt.getFullYear() === today.getFullYear()
+          lastCompletedAt.getUTCDate() === now.getUTCDate() &&
+          lastCompletedAt.getUTCMonth() === now.getUTCMonth() &&
+          lastCompletedAt.getUTCFullYear() === now.getUTCFullYear()
         ) {
           throw new BadRequestException('Repeating task is already completed for today');
         }
@@ -180,7 +176,7 @@ export class TodoService {
           isCompleted: false, // تبقى غير مكتملة لأنها متكررة
           notified: todo.expectedTime ? true : false,
           taskcompletions: {
-            create: { completedAt: normalizeDate(new Date()) },
+            create: { completedAt: new Date() },
           },
         },
       });
@@ -191,7 +187,7 @@ export class TodoService {
         data: {
           isCompleted: true, // تكتمل نهائياً
           taskcompletions: {
-            create: { completedAt: normalizeDate(new Date()) },
+            create: { completedAt: new Date() },
           },
         },
       });
@@ -246,12 +242,45 @@ export class TodoService {
   }
 
   async getTodoStats(userId: number) {
-    const [completed, incomplete] = await Promise.all([
-      this.prisma.todo.count({ where: { userId, isCompleted: true } }),
-      this.prisma.todo.count({ where: { userId, isCompleted: false } }),
+    const todayStart = new Date();
+    todayStart.setUTCHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setUTCHours(23, 59, 59, 999);
+
+    const [completedNonRepeating, completedRepeatingToday, incomplete] = await Promise.all([
+      this.prisma.todo.count({
+        where: { userId, isCompleted: true },
+      }),
+      this.prisma.todo.count({
+        where: {
+          userId,
+          repeatUnit: { not: null },
+          taskcompletions: {
+            some: {
+              completedAt: { gte: todayStart, lte: todayEnd },
+            },
+          },
+        },
+      }),
+      this.prisma.todo.count({
+        where: {
+          userId,
+          OR: [
+            { isCompleted: false, repeatUnit: null },
+            {
+              repeatUnit: { not: null },
+              taskcompletions: {
+                none: {
+                  completedAt: { gte: todayStart, lte: todayEnd },
+                },
+              },
+            },
+          ],
+        },
+      }),
     ]);
 
-    return { completed, incomplete };
+    return { completed: completedNonRepeating + completedRepeatingToday, incomplete };
   }
 
   async findByCategory(categoryId: number, userId: number) {
