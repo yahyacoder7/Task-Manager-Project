@@ -8,6 +8,10 @@ import { UpdateTodoDto } from './dto/update-todo.dto';
 import { PrismaService } from '../../prisma/service/prisma.service';
 import { AiService } from '../ai/ai.service';
 
+function normalizeDate(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+}
+
 @Injectable()
 export class TodoService {
   constructor(
@@ -137,8 +141,8 @@ export class TodoService {
       // التحقق مما إذا كانت المهمة قد اكتملت بالفعل اليوم
       const lastCompletion = todo.taskcompletions[0];
       if (lastCompletion) {
-        const today = new Date();
-        const lastCompletedAt = new Date(lastCompletion.completedAt);
+        const today = normalizeDate(new Date());
+        const lastCompletedAt = normalizeDate(new Date(lastCompletion.completedAt));
         if (
           lastCompletedAt.getDate() === today.getDate() &&
           lastCompletedAt.getMonth() === today.getMonth() &&
@@ -176,7 +180,7 @@ export class TodoService {
           isCompleted: false, // تبقى غير مكتملة لأنها متكررة
           notified: todo.expectedTime ? true : false,
           taskcompletions: {
-            create: { completedAt: new Date() },
+            create: { completedAt: normalizeDate(new Date()) },
           },
         },
       });
@@ -187,7 +191,7 @@ export class TodoService {
         data: {
           isCompleted: true, // تكتمل نهائياً
           taskcompletions: {
-            create: { completedAt: new Date() },
+            create: { completedAt: normalizeDate(new Date()) },
           },
         },
       });
