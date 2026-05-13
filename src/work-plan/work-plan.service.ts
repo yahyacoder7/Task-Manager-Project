@@ -245,7 +245,7 @@ export class WorkPlanService {
             category: true,
             taskcompletions: {
               where: { completedAt: { gte: todayStart(), lte: todayEnd() } },
-              select: { completionId: true },
+              select: { completedAt: true },
               take: 1,
             },
           },
