@@ -10,6 +10,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { CategoryModule } from './category/category.module';
 import { WorkPlanModule } from './work-plan/work-plan.module';
 import { AiModule } from './ai/ai.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { AiModule } from './ai/ai.module';
     CategoryModule,
     WorkPlanModule,
     AiModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
