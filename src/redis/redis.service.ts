@@ -10,6 +10,8 @@ export class RedisService extends Redis implements OnModuleInit, OnModuleDestroy
     super({
       host: configService.get<string>('REDIS_HOST'),
       port: Number(configService.get<number>('REDIS_PORT')),
+      password: configService.get<string>('REDIS_PASSWORD'),
+      tls: {},
       maxRetriesPerRequest: null,
       enableReadyCheck: false
     });
