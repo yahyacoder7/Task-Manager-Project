@@ -62,13 +62,15 @@ export class AnalyticsService {
 
   async getCompletionTrend(userId: number, days: number) {
     const result: { date: string; count: number }[] = [];
+    const now = new Date();
     for (let i = days - 1; i >= 0; i--) {
-      const d = new Date();
+      const d = new Date(now);
       d.setDate(d.getDate() - i);
-      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-      const dayEnd = new Date(dayStart);
-      dayEnd.setUTCHours(23, 59, 59, 999);
-      dayStart.setUTCHours(0, 0, 0, 0);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const day = d.getDate();
+      const dayStart = new Date(year, month, day);
+      const dayEnd = new Date(year, month, day, 23, 59, 59, 999);
 
       const count = await this.prisma.taskcompletion.count({
         where: {
@@ -77,8 +79,11 @@ export class AnalyticsService {
         },
       });
 
+      const y = String(year);
+      const m = String(month + 1).padStart(2, '0');
+      const dStr = String(day).padStart(2, '0');
       result.push({
-        date: dayStart.toISOString().split('T')[0],
+        date: `${y}-${m}-${dStr}`,
         count,
       });
     }
