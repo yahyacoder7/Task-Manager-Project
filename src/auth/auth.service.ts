@@ -113,9 +113,13 @@ export class AuthService {
 
     await this.redisService.del(`register:${email}`);
 
+    // Auto-login: generate JWT token after successful verification
+    const { password: _, ...userWithoutPassword } = newUser;
+    const loginResult = await this.login(userWithoutPassword);
+
     return {
       message: 'User registered successfully',
-      user: newUser,
+      ...loginResult,
     };
   }
 
