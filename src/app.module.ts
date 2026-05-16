@@ -11,10 +11,16 @@ import { CategoryModule } from './category/category.module';
 import { WorkPlanModule } from './work-plan/work-plan.module';
 import { AiModule } from './ai/ai.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([{
+      ttl: 60000, // 1 minute
+      limit: 10,  // الحد الأقصى 10 طلبات في الدقيقة الواحدة لكل IP
+    }]),
     UsersModule,
     PrismaModule,
     AuthModule,
@@ -28,6 +34,12 @@ import { AnalyticsModule } from './analytics/analytics.module';
     AnalyticsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

@@ -33,6 +33,13 @@ export class UsersController {
   }
 
   @UseGuards(AuthGuard)
+  @Get('notifications')
+  @ApiOperation({ summary: 'Get all pending notifications for the logged-in user' })
+  async getNotifications(@Req() req: any) {
+    return await this.usersService.getNotifications(+req.user.sub);
+  }
+
+  @UseGuards(AuthGuard)
   @Patch('profile')
   @ApiOperation({ summary: 'Update current logged-in user profile' })
   async updateProfile(@Req() req: any, @Body() updateUserDto: UpdateUserDto) {

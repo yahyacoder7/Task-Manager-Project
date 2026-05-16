@@ -9,12 +9,14 @@ import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { CreateUserDto } from '../users/dto/create-user.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('register')
   @ApiOperation({ summary: 'Register a new user and send OTP' })
   @ApiResponse({ status: 201, description: 'User data stored, OTP sent to email.' })
@@ -42,6 +44,7 @@ export class AuthController {
     return await this.authService.login(user!);
   }
 
+  @Throttle({ default: { limit: 3, ttl: 60000 } })
   @Post('resend-otp')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend OTP code to user email' })

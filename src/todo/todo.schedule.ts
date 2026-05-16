@@ -2,10 +2,15 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression, Interval } from '@nestjs/schedule';
 import { PrismaService } from '../../prisma/service/prisma.service';
 import { ExpectedTime } from '@prisma/client';
+import { RedisService } from '../redis/redis.service';
+
 @Injectable()
 export class TodoSchedule {
   private readonly logger = new Logger(TodoSchedule.name);
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+  ) {}
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handle() {
@@ -46,9 +51,20 @@ export class TodoSchedule {
 
     if (dueTodos.length > 0) {
       const todoIds = dueTodos.map((todo) => todo.todoId);
-      dueTodos.forEach((todo) => {
+      dueTodos.forEach(async (todo) => {
+        const notification = {
+          title: 'Task Reminder',
+          message: `It is time to perform your task: ${todo.title}`,
+          todoId: todo.todoId,
+          createdAt: new Date(),
+        };
+
+        const redisKey = `notifications:${todo.userId}`;
+        await this.redis.rpush(redisKey, JSON.stringify(notification));
+        await this.redis.expire(redisKey, 86400); // تختفي بعد 24 ساعة
+
         this.logger.log(
-          `Sending reminder for todo: ${todo.title} to user ${todo.userId}`,
+          `Stored notification in Redis for todo: ${todo.title} to user ${todo.userId}`,
         );
       });
 
@@ -84,11 +100,23 @@ export class TodoSchedule {
     if (dueTodos.length > 0) {
       const todoIds = dueTodos.map((todo) => todo.todoId);
 
-      dueTodos.forEach((todo) => {
+      dueTodos.forEach(async (todo) => {
+        const notification = {
+          title: 'Period Task Reminder',
+          message: `Time to perform the task for this period: ${todo.title}`,
+          todoId: todo.todoId,
+          createdAt: new Date(),
+        };
+
+        const redisKey = `notifications:${todo.userId}`;
+        await this.redis.rpush(redisKey, JSON.stringify(notification));
+        await this.redis.expire(redisKey, 86400); // 24 hours
+
         this.logger.log(
-          `Sending reminder for todo: ${todo.title} to user ${todo.userId}`,
+          `Stored period notification in Redis for todo: ${todo.title} to user ${todo.userId}`,
         );
       });
+
       await this.prisma.todo.updateMany({
         where: { todoId: { in: todoIds } },
         data: {

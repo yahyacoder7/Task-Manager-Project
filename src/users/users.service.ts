@@ -4,10 +4,25 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from '../../prisma/service/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { Role } from '@prisma/client';
+import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private redis: RedisService,
+  ) {}
+
+  async getNotifications(userId: number) {
+    const redisKey = `notifications:${userId}`;
+    // جلب كل الإشعارات من القائمة
+    const notifications = await this.redis.lrange(redisKey, 0, -1);
+    
+    // مسح الإشعارات بعد جلبها (لأننا اعتبرناها وصلت للمستخدم)
+    await this.redis.del(redisKey);
+
+    return notifications.map(n => JSON.parse(n));
+  }
 
   async create(createUserDto: CreateUserDto & {role?:Role , isVerified?:boolean  } ) {
     const salt = await bcrypt.genSalt();
