@@ -12,16 +12,25 @@ export class RedisService extends Redis implements OnModuleInit, OnModuleDestroy
     super(redisUrl, {
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
-      tls: {}, // نتركها فارغة لتفعيل الـ SSL بشكل صحيح مع الرابط
+      tls: {},
+    });
+
+    // نضع المستمعين هنا في الـ constructor لنضمن التقاط الحدث فوراً
+    this.on('connect', () => {
+      this.logger.log('🟢 Redis Attempting Connection... 🟢');
+    });
+
+    this.on('ready', () => {
+      this.logger.log('✅ Redis is Ready and Connected! ✅');
+    });
+
+    this.on('error', (error) => {
+      this.logger.error('🔴 Redis Error: ' + error.message);
     });
   }
+
   onModuleInit() {
-    this.on('connect', () => {
-      this.logger.log('🟢 Redis connected 🟢');
-    });
-    this.on('error', (error) => {
-      this.logger.error(error + '🔴 Redis not connected 🔴');
-    });
+    // تم نقل المنطق للـ constructor
   }
   onModuleDestroy() {
     this.disconnect();
