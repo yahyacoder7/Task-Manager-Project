@@ -1,40 +1,44 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class MailService {
-  constructor(private readonly configService: ConfigService) {}
+  private transporter: nodemailer.Transporter;
+
+  constructor(private readonly configService: ConfigService) {
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: this.configService.get<string>('EMAIL_USER'),
+        pass: this.configService.get<string>('EMAIL_PASS'),
+      },
+    });
+  }
 
   async sendOTP(email: string, otp: string) {
-    const apiKey = this.configService.get<string>('EMAIL_PASS');
-    console.log(`📧 Attempting to send OTP to ${email} via Resend API (HTTP)...`);
+    console.log(`📧 Attempting to send OTP to ${email} via Gmail (Nodemailer)...`);
 
     try {
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          from: 'onboarding@resend.dev',
-          to: email,
-          subject: 'Your OTP Code',
-          html: `<div style="text-align: right;"><h3>Your OTP Code:</h3><h1>${otp}</h1></div>`,
-        }),
-      });
+      const mailOptions = {
+        from: `"Task Manager" <${this.configService.get<string>('EMAIL_USER')}>`,
+        to: email,
+        subject: 'رمز التحقق الخاص بك (OTP)',
+        html: `
+          <div style="font-family: Arial, sans-serif; text-align: right; direction: rtl; padding: 20px;">
+            <h2>مرحباً بك!</h2>
+            <p>رمز التحقق الخاص بك هو:</p>
+            <h1 style="color: #D84315; background: #f4f4f4; padding: 10px; display: inline-block; border-radius: 8px;">${otp}</h1>
+            <p>الرجاء عدم مشاركة هذا الرمز مع أي شخص.</p>
+          </div>
+        `,
+      };
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        console.error('❌ Resend API Error:', data);
-        throw new Error(data.message || 'Failed to send email');
-      }
-
-      console.log('✅ Email sent successfully via Resend API!', data.id);
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('✅ Email sent successfully via Gmail!', info.messageId);
     } catch (error: any) {
-      console.error('❌ MailService HTTP Error:', error.message);
-      throw error;
+      console.error('❌ MailService Nodemailer Error:', error.message);
+      throw new InternalServerErrorException('فشل في إرسال البريد الإلكتروني، تحقق من إعدادات Gmail');
     }
   }
 }
