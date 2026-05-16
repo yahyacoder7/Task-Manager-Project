@@ -1,36 +1,39 @@
-import { Injectable } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MailService {
-    private readonly transporter: nodemailer.Transporter
-  constructor(
-    private readonly configService: ConfigService,
-  ) {
-    this.transporter = nodemailer.createTransport({
-      host: 'smtp.resend.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user: 'resend', // ثابتة دائماً مع Resend
-        pass: this.configService.get<string>('EMAIL_PASS'), // ضع الـ API Key في هذا المتغير في Render
-      },
-    });
-  }
+  constructor(private readonly configService: ConfigService) {}
 
   async sendOTP(email: string, otp: string) {
-    console.log(`📧 Attempting to send OTP to ${email} via Resend...`);
+    const apiKey = this.configService.get<string>('EMAIL_PASS');
+    console.log(`📧 Attempting to send OTP to ${email} via Resend API (HTTP)...`);
+
     try {
-      await this.transporter.sendMail({
-        from: 'onboarding@resend.dev', // في النسخة المجانية يجب أن تستخدم هذا الإيميل أو دومين موثق
-        to: email,
-        subject: 'Your OTP Code',
-        html: `<div style="text-align: right;"><h3>Your OTP Code:</h3><h1>${otp}</h1></div>`
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          from: 'onboarding@resend.dev',
+          to: email,
+          subject: 'Your OTP Code',
+          html: `<div style="text-align: right;"><h3>Your OTP Code:</h3><h1>${otp}</h1></div>`,
+        }),
       });
-      console.log('✅ Email sent successfully via Resend!');
-    } catch (error) {
-      console.error('❌ MailService Error:', error);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Resend API Error:', data);
+        throw new Error(data.message || 'Failed to send email');
+      }
+
+      console.log('✅ Email sent successfully via Resend API!', data.id);
+    } catch (error: any) {
+      console.error('❌ MailService HTTP Error:', error.message);
       throw error;
     }
   }
