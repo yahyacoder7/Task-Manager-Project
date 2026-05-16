@@ -8,16 +8,22 @@ export class MailService {
 
   constructor(private readonly configService: ConfigService) {
     this.transporter = nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // استخدام SSL
       auth: {
         user: this.configService.get<string>('EMAIL_USER'),
         pass: this.configService.get<string>('EMAIL_PASS'),
       },
+      // هذا الخيار مهم جداً لحل مشكلة ENETUNREACH في Render
+      // فهو يجبر النودميلر على استخدام IPv4 بدلاً من IPv6
+      // @ts-ignore
+      family: 4, 
     });
   }
 
   async sendOTP(email: string, otp: string) {
-    console.log(`📧 Attempting to send OTP to ${email} via Gmail (Nodemailer)...`);
+    console.log(`📧 Attempting to send OTP to ${email} via Gmail SMTP (IPv4)...`);
 
     try {
       const mailOptions = {
@@ -35,10 +41,14 @@ export class MailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Email sent successfully via Gmail!', info.messageId);
+      console.log('✅ Email sent successfully via Gmail SMTP!', info.messageId);
     } catch (error: any) {
-      console.error('❌ MailService Nodemailer Error:', error.message);
-      throw new InternalServerErrorException('فشل في إرسال البريد الإلكتروني، تحقق من إعدادات Gmail');
+      console.error('❌ MailService SMTP Error:', error.message);
+      
+      // إذا استمر الخطأ، فمن المحتمل أن تكون المشكلة في App Password أو حظر من طرف Render
+      throw new InternalServerErrorException(
+        `فشل في إرسال البريد الإلكتروني: ${error.message}`
+      );
     }
   }
 }
