@@ -7,9 +7,13 @@ export class MailService {
   private transporter: nodemailer.Transporter;
 
   constructor(private readonly configService: ConfigService) {
+    const host = this.configService.get<string>('EMAIL_HOST') || 'smtp-relay.brevo.com';
+    const port = Number(this.configService.get<number>('EMAIL_PORT')) || 587;
+    console.log(`📧 Mail configured with host: ${host}, port: ${port}`);
+
     this.transporter = nodemailer.createTransport({
-      host: this.configService.get<string>('EMAIL_HOST') || 'smtp-relay.brevo.com',
-      port: Number(this.configService.get<number>('EMAIL_PORT')) || 587,
+      host,
+      port,
       secure: false, 
       auth: {
         user: this.configService.get<string>('EMAIL_USER'),
@@ -19,7 +23,7 @@ export class MailService {
   }
 
   async sendOTP(email: string, otp: string) {
-    console.log(`📧 Attempting to send OTP to ${email} via Gmail SMTP (IPv4)...`);
+    console.log(`📧 Attempting to send OTP to ${email} via Brevo SMTP...`);
 
     try {
       const mailOptions = {
@@ -37,7 +41,7 @@ export class MailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('✅ Email sent successfully via Gmail SMTP!', info.messageId);
+      console.log('✅ Email sent successfully via Brevo SMTP!', info.messageId);
     } catch (error: any) {
       console.error('❌ MailService SMTP Error:', error.message);
       
