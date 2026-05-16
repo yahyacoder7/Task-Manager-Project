@@ -15,11 +15,9 @@ export class MailService {
         user: this.configService.get<string>('EMAIL_USER'),
         pass: this.configService.get<string>('EMAIL_PASS'),
       },
-      // هذا الخيار مهم جداً لحل مشكلة ENETUNREACH في Render
-      // فهو يجبر النودميلر على استخدام IPv4 بدلاً من IPv6
       // @ts-ignore
       family: 4, 
-    });
+    } as any);
   }
 
   async sendOTP(email: string, otp: string) {
