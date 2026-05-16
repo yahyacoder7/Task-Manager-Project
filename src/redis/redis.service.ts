@@ -7,13 +7,12 @@ import { ConfigService } from '@nestjs/config';
 export class RedisService extends Redis implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   constructor(private readonly configService: ConfigService) {
-    super({
-      host: configService.get<string>('REDIS_HOST'),
-      port: Number(configService.get<number>('REDIS_PORT')),
-      password: configService.get<string>('REDIS_PASSWORD'),
-      tls: {},
+    const redisUrl = configService.get<string>('REDIS_URL') || '';
+    
+    super(redisUrl, {
       maxRetriesPerRequest: null,
-      enableReadyCheck: false
+      enableReadyCheck: false,
+      tls: {}, // نتركها فارغة لتفعيل الـ SSL بشكل صحيح مع الرابط
     });
   }
   onModuleInit() {
