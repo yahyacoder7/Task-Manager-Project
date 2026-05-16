@@ -9,28 +9,26 @@ export class MailService {
     private readonly configService: ConfigService,
   ) {
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
+      host: 'smtp.resend.com',
       port: 465,
-      secure: true, // استخدم true للمنفذ 465 فقط
+      secure: true,
       auth: {
-        user: this.configService.get<string>('EMAIL_USER'),
-        pass: this.configService.get<string>('EMAIL_PASS'),
+        user: 'resend', // ثابتة دائماً مع Resend
+        pass: this.configService.get<string>('EMAIL_PASS'), // ضع الـ API Key في هذا المتغير في Render
       },
-      connectionTimeout: 10000, // 10 ثوانٍ كحد أقصى للاتصال
-      greetingTimeout: 10000,
     });
   }
 
   async sendOTP(email: string, otp: string) {
-    console.log(`📧 Attempting to send OTP to ${email}...`);
+    console.log(`📧 Attempting to send OTP to ${email} via Resend...`);
     try {
       await this.transporter.sendMail({
-        from: `"ToDo Manager" <${this.configService.get('EMAIL_USER')}>`,
+        from: 'onboarding@resend.dev', // في النسخة المجانية يجب أن تستخدم هذا الإيميل أو دومين موثق
         to: email,
         subject: 'Your OTP Code',
         html: `<div style="text-align: right;"><h3>Your OTP Code:</h3><h1>${otp}</h1></div>`
       });
-      console.log('✅ Email sent successfully!');
+      console.log('✅ Email sent successfully via Resend!');
     } catch (error) {
       console.error('❌ MailService Error:', error);
       throw error;
