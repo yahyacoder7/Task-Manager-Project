@@ -8,15 +8,13 @@ export class MailService {
 
   constructor(private readonly configService: ConfigService) {
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false, // false لاستخدام المنفذ 587 مع STARTTLS
+      host: this.configService.get<string>('EMAIL_HOST') || 'smtp-relay.brevo.com',
+      port: Number(this.configService.get<number>('EMAIL_PORT')) || 587,
+      secure: false, 
       auth: {
         user: this.configService.get<string>('EMAIL_USER'),
         pass: this.configService.get<string>('EMAIL_PASS'),
       },
-      // @ts-ignore
-      family: 4, 
     } as any);
   }
 
@@ -25,9 +23,9 @@ export class MailService {
 
     try {
       const mailOptions = {
-        from: `"Task Flow" <${this.configService.get<string>('EMAIL_USER')}>`,
+        from: `"Task Flow" <${this.configService.get<string>('EMAIL_FROM')}>`,
         to: email,
-        subject: 'رمز التحقق الخاص بك (OTP)',
+        subject: 'Your Verification Code (OTP)',
         html: `
           <div style="font-family: Arial, sans-serif; text-align: right; direction: rtl; padding: 20px;">
             <h2>مرحباً بك في Task Flow!</h2>
