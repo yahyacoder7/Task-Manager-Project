@@ -82,9 +82,9 @@ export class AuthService {
         'EX',
         60 * 5,
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration Error Details:', error);
-      throw new InternalServerErrorException('Failed to send verification code');
+      throw new InternalServerErrorException(`Failed to send verification code: ${error.message || error}`);
     }
   }
 
